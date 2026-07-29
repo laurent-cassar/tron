@@ -1,0 +1,2 @@
+TEST
+g++ .\InputManager.cpp .\test.cpp -o test

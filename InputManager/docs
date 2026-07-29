@@ -1,0 +1,8 @@
+https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+To know every virtual key code of a keyboard (or controller) binds
+
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate
+
+https://www.reddit.com/r/C_Programming/comments/tnafft/highorder_bit_of_a_signed_short/
+
+https://stackoverflow.com/questions/5302456/how-do-i-get-the-high-and-low-order-bits-of-a-short
