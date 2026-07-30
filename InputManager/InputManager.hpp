@@ -5,8 +5,10 @@
 #include <iostream> // cout
 
 // IMPORTANT :
+// GL = GLobal -> clavier, souris
 // KB = "KeyBoard" -> clavier
 // MOU = Mouse -> souris
+
 
 // IMPORTANT : La "casse" des lettres n'est pas pris en compte!
 // Cela veut dire que KB_A est aussi égal à KB_a, vois-tu ?
@@ -54,18 +56,20 @@
 #define KB_SPACE 0x20
 #define KB_ESC 0x1B
 
-#define MOU_left 0x01
-#define MOU_right 0x02
-#define MOU_mid 0x04
-#define MOU_midUp 0
-#define MOU_midDown 0
+// Toutes les macros des touches de la souris
+#define MOU_LEFT 0x01
+#define MOU_RIGHT 0x02
+#define MOU_MID 0x04
+#define MOU_BUTTON1 0x06
+#define MOU_BUTTON2 0x05
+#define MOU_ZOOM 0xFB
 
-struct MousePosition { // Simple structure contenant les positions x and y de la souris par rapport à l'écran
-            float x;
-            float y;
+struct CursorPosition { // Simple structure contenant les positions x and y de la souris par rapport à l'écran
+    LONG x; // Fait référence à tagPoint::x
+    LONG y; // Fait référence à tagPoint::y
 };     
 
-bool KBInputDown(int inputTarget); // Retourne si une touche spécifique du clavier a été "triggered"
+bool GLInputDown(int inputTarget); // Retourne si une touche spécifique du clavier ou  a été "triggered"
 
 bool KBInputToggle(int inputTarget); // Retourne si une touche spécifique du clavier a été "toggled"
 // Note pour implémentation : Si le bit d'ordre bas a pour valeure 1, 
@@ -76,7 +80,7 @@ void *KBLivePressed(); // Retourne une liste de toutes les touches du clavier qu
 bool MOUInputClicked(int inputTarget); // Retourne si une touche spécifique de la souris a été "triggered"
 int MOULastPressed(); // Retourne la dernière touche "triggered" par la souris
 void* MOULivePressed(); // Retourne une liste de toutes les touches de la souris qui sont "triggered" en temps réel
-MousePosition *MOUGetPosition(); // Retourne les positions x et y de la souris par rapport à l'écran
-
+CursorPosition MOUGetPosition(); // Retourne les positions x et y DU CURSEUR DE LA SOURIS par rapport à l'écran et renvoie un CursorPosition negatif si echec
+// C'est pourquoi cette fonction renvoie void et non pas un CursorPosition comme il était dis de base..
 
 #endif
