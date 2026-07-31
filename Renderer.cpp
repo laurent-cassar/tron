@@ -98,46 +98,13 @@ bool Renderer::InitPipeline()
 
 // ---------------------------------------------------------------
 // Carte "Rendu de Meshes Proceduraux" : un cube genere en code (8 sommets, 36 indices)
+// La geometrie elle-meme est desormais encapsulee dans MeshComponent (voir
+// MeshComponent.h/.cpp), afin de pouvoir plus tard etre attachee a une Entity
+// dans le systeme Transform / Camera commun avec le reste de l'equipe.
 // ---------------------------------------------------------------
 bool Renderer::InitMesh()
 {
-    Vertex vertices[] = {
-        { XMFLOAT3(-0.5f,-0.5f,-0.5f), XMFLOAT3(0,0,0) }, // 0
-        { XMFLOAT3( 0.5f,-0.5f,-0.5f), XMFLOAT3(1,0,0) }, // 1
-        { XMFLOAT3( 0.5f, 0.5f,-0.5f), XMFLOAT3(1,1,0) }, // 2
-        { XMFLOAT3(-0.5f, 0.5f,-0.5f), XMFLOAT3(0,1,0) }, // 3
-        { XMFLOAT3(-0.5f,-0.5f, 0.5f), XMFLOAT3(0,0,1) }, // 4
-        { XMFLOAT3( 0.5f,-0.5f, 0.5f), XMFLOAT3(1,0,1) }, // 5
-        { XMFLOAT3( 0.5f, 0.5f, 0.5f), XMFLOAT3(1,1,1) }, // 6
-        { XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT3(0,1,1) }, // 7
-    };
-
-    // Ordre horaire vu de l'exterieur sur chaque face (requis par CullMode Back)
-    UINT indices[] = {
-        0,3,2, 0,2,1,   // face avant  (-Z)
-        4,5,6, 4,6,7,   // face arriere (+Z)
-        0,4,7, 0,7,3,   // face gauche (-X)
-        1,2,6, 1,6,5,   // face droite (+X)
-        3,7,6, 3,6,2,   // face du dessus (+Y)
-        0,1,5, 0,5,4    // face du dessous (-Y)
-    };
-    m_indexCount = ARRAYSIZE(indices);
-
-    D3D11_BUFFER_DESC vbd = {};
-    vbd.Usage = D3D11_USAGE_DEFAULT;
-    vbd.ByteWidth = sizeof(vertices);
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit = { vertices };
-    HRESULT hr = m_device->CreateBuffer(&vbd, &vinit, &m_vertexBuffer);
-    if (FAILED(hr)) return false;
-
-    D3D11_BUFFER_DESC ibd = {};
-    ibd.Usage = D3D11_USAGE_DEFAULT;
-    ibd.ByteWidth = sizeof(indices);
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit = { indices };
-    hr = m_device->CreateBuffer(&ibd, &iinit, &m_indexBuffer);
-    if (FAILED(hr)) return false;
+    if (!m_mesh.CreateUnitCube(m_device.Get())) return false;
 
     // Constant buffer pour la matrice WVP (temporaire : remplace plus tard par le
     // vrai systeme Transform / Camera du reste de l'equipe)
@@ -204,9 +171,7 @@ void Renderer::Render()
     buf->WVP = XMMatrixTranspose(world * view * proj);
     m_context->Unmap(m_constantBuffer.Get(), 0);
 
-    UINT stride = sizeof(Vertex), offset = 0;
-    m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-    m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+    m_mesh.Bind(m_context.Get());
     m_context->IASetInputLayout(m_inputLayout.Get());
     m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -214,7 +179,7 @@ void Renderer::Render()
     m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
     m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-    m_context->DrawIndexed(m_indexCount, 0, 0);
+    m_context->DrawIndexed(m_mesh.GetIndexCount(), 0, 0);
 
     m_swapChain->Present(1, 0);
 }

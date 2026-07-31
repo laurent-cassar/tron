@@ -7,6 +7,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include <DirectXMath.h>
+#include "MeshComponent.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -24,12 +25,6 @@ private:
     bool InitMesh();
     bool InitRasterizer();
 
-    struct Vertex
-    {
-        XMFLOAT3 pos;
-        XMFLOAT3 color;
-    };
-
     struct TransformBuffer
     {
         XMMATRIX WVP;
@@ -45,13 +40,12 @@ private:
     ComPtr<ID3D11PixelShader>       m_pixelShader;
     ComPtr<ID3D11InputLayout>       m_inputLayout;
 
-    ComPtr<ID3D11Buffer>            m_vertexBuffer;
-    ComPtr<ID3D11Buffer>            m_indexBuffer;
     ComPtr<ID3D11Buffer>            m_constantBuffer;
 
     ComPtr<ID3D11RasterizerState>   m_rasterState;
 
-    UINT  m_indexCount = 0;
+    MeshComponent m_mesh; // remplace les anciens m_vertexBuffer / m_indexBuffer / m_indexCount
+
     int   m_width = 0;
     int   m_height = 0;
     float m_rotation = 0.0f;
