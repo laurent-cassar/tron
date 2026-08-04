@@ -3,28 +3,26 @@
 using namespace DirectX;
 
 Transform::Transform()
-    : m_position(Vector3::Zero())
-    , m_rotation(Vector4::Identity())
-    , m_scale(Vector3::One())
+    : m_position(Vector3::Zero()), m_rotation(Vector4::Identity()), m_scale(Vector3::One())
 {
 }
 
-void Transform::SetPosition(const Vector3& position)
+void Transform::SetPosition(const Vector3 &position)
 {
     m_position = position;
 }
 
-void Transform::SetRotation(const Vector4& rotationQuaternion)
+void Transform::SetRotation(const Vector4 &rotationQuaternion)
 {
     m_rotation = rotationQuaternion;
 }
 
-void Transform::SetScale(const Vector3& scale)
+void Transform::SetScale(const Vector3 &scale)
 {
     m_scale = scale;
 }
 
-void Transform::Translate(const Vector3& delta)
+void Transform::Translate(const Vector3 &delta)
 {
     m_position += delta;
 }
@@ -56,10 +54,7 @@ Matrix4x4 Transform::GetWorldMatrix() const
     XMVECTOR rotationXM = m_rotation.ToXM();
     XMVECTOR positionXM = XMVectorSet(m_position.x, m_position.y, m_position.z, 0.0f);
 
-    // World = Scale * Rotation * Translation
-    XMMATRIX world = XMMatrixScalingFromVector(scaleXM)
-                    * XMMatrixRotationQuaternion(rotationXM)
-                    * XMMatrixTranslationFromVector(positionXM);
+    XMMATRIX world = XMMatrixScalingFromVector(scaleXM) * XMMatrixRotationQuaternion(rotationXM) * XMMatrixTranslationFromVector(positionXM);
 
     return Matrix4x4::FromXM(world);
 }

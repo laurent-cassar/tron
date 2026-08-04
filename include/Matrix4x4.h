@@ -2,9 +2,6 @@
 
 #include <directxmath/DirectXMath.h>
 
-// Matrix4x4 : wrapper autour de XMFLOAT4X4/XMMATRIX.
-// Sert à représenter la World Matrix (Transform), la View Matrix et
-// la Projection Matrix (Camera) avant de les envoyer au Vertex Shader.
 struct Matrix4x4
 {
     DirectX::XMFLOAT4X4 m;
@@ -28,7 +25,7 @@ struct Matrix4x4
         return DirectX::XMLoadFloat4x4(&m);
     }
 
-    static Matrix4x4 Multiply(const Matrix4x4& a, const Matrix4x4& b)
+    static Matrix4x4 Multiply(const Matrix4x4 &a, const Matrix4x4 &b)
     {
         return FromXM(DirectX::XMMatrixMultiply(a.ToXM(), b.ToXM()));
     }

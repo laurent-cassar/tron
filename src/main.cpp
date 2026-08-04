@@ -8,7 +8,7 @@
 #pragma comment(lib, "d3d11.lib")
 
 // ---------------------------------------------------------------------
-// Variables globales D3D (simplifié pour un début de projet)
+// Variables globales D3D
 // ---------------------------------------------------------------------
 static ID3D11Device *g_device = nullptr;
 static ID3D11DeviceContext *g_context = nullptr;
@@ -36,11 +36,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 // ---------------------------------------------------------------------
-// Initialisation Direct3D (étapes 1 à 9 du slide "Étapes d'initialisation")
+// Initialisation Direct3D
 // ---------------------------------------------------------------------
 bool InitDirect3D(HWND hwnd)
 {
-    // 2. Description de la swapchain
     DXGI_SWAP_CHAIN_DESC scd = {};
     scd.BufferCount = 1;
     scd.BufferDesc.Width = WINDOW_WIDTH;
@@ -75,15 +74,12 @@ bool InitDirect3D(HWND hwnd)
         return false;
     }
 
-    // 3. Récupération du Back Buffer
     ID3D11Texture2D *backBuffer = nullptr;
     g_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backBuffer);
 
-    // 4. Création de la Render Target View
     g_device->CreateRenderTargetView(backBuffer, nullptr, &g_renderTargetView);
     backBuffer->Release();
 
-    // 5. Création de la texture 2D pour le Depth-Stencil
     D3D11_TEXTURE2D_DESC depthDesc = {};
     depthDesc.Width = WINDOW_WIDTH;
     depthDesc.Height = WINDOW_HEIGHT;
@@ -97,14 +93,11 @@ bool InitDirect3D(HWND hwnd)
     ID3D11Texture2D *depthStencilBuffer = nullptr;
     g_device->CreateTexture2D(&depthDesc, nullptr, &depthStencilBuffer);
 
-    // 6. Création de la Depth-Stencil View
     g_device->CreateDepthStencilView(depthStencilBuffer, nullptr, &g_depthStencilView);
     depthStencilBuffer->Release();
 
-    // 7. Liaison de la RTV & DSV à l'Output-Merger
     g_context->OMSetRenderTargets(1, &g_renderTargetView, g_depthStencilView);
 
-    // 8. Configuration du Viewport
     D3D11_VIEWPORT viewport = {};
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
@@ -114,9 +107,8 @@ bool InitDirect3D(HWND hwnd)
     viewport.MaxDepth = 1.0f;
     g_context->RSSetViewports(1, &viewport);
 
-    // 9/10. Shaders & Input Layout : à ajouter une fois la partie caméra validée
+    // Shaders & Input Layout à ajouter une fois la partie caméra validée
 
-    // Initialisation de la projection de la caméra
     float aspectRatio = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
     g_camera.SetProjection(DirectX::XM_PIDIV4, aspectRatio, 0.1f, 100.0f);
 
@@ -162,20 +154,16 @@ void HandleCameraInput(float deltaTime)
 }
 
 // ---------------------------------------------------------------------
-// Boucle de rendu (CLEAR / DRAW / DISPLAY)
+// Boucle de rendu
 // ---------------------------------------------------------------------
 void RenderFrame()
 {
-    // CLEAR
     const float clearColor[4] = {0.05f, 0.05f, 0.1f, 1.0f};
     g_context->ClearRenderTargetView(g_renderTargetView, clearColor);
     g_context->ClearDepthStencilView(g_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // DRAW : à ajouter une fois qu'on a un mesh + shaders
-    // -> ici c'est le View/Projection de g_camera qui seront bindés
-    //    au buffer de matrices du Vertex Shader.
 
-    // DISPLAY
     g_swapChain->Present(1, 0);
 }
 
@@ -221,7 +209,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         }
         else
         {
-            // deltaTime fixe pour ce début de projet, à remplacer par un vrai timer
             HandleCameraInput(0.016f);
             RenderFrame();
         }

@@ -2,8 +2,6 @@
 
 #include <directxmath/DirectXMath.h>
 
-// Vector4 : utilisé principalement pour stocker un quaternion de rotation
-// (x, y, z, w). Un quaternion identité (aucune rotation) est (0, 0, 0, 1).
 struct Vector4
 {
     float x, y, z, w;
@@ -14,14 +12,13 @@ struct Vector4
     static Vector4 Identity() { return Vector4(0.0f, 0.0f, 0.0f, 1.0f); }
 
     // Construit un quaternion à partir d'un axe et d'un angle (radians)
-    static Vector4 FromAxisAngle(const Vector3& axis, float angleRadians)
+    static Vector4 FromAxisAngle(const Vector3 &axis, float angleRadians)
     {
         DirectX::XMVECTOR axisXM = axis.ToXM();
         DirectX::XMVECTOR q = DirectX::XMQuaternionRotationAxis(axisXM, angleRadians);
         return FromXM(q);
     }
 
-    // Construit un quaternion à partir des angles yaw (Y) / pitch (X) / roll (Z) en radians
     static Vector4 FromEuler(float pitch, float yaw, float roll)
     {
         DirectX::XMVECTOR q = DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
