@@ -23,5 +23,5 @@ g++ -Iinclude test/Tests.cpp src/Camera.cpp src/Transform.cpp -o Tests.exe -std=
 Puis lancer l'executable
 
 ```
-test.exe
+Tests.exe
 ```
