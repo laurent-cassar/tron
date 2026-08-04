@@ -1,12 +1,43 @@
-# tron
-Un moteur de rendu 3D est un ensemble d’algorithmes formant ce qui est
-appelé le pipeline graphique qui utilise les cartes graphiques (matériel) et qui
-calculent une ou plusieurs images 3D en y restituant non seulement la
-projection 3D, les textures (apparence des surfaces des objets visualisés)
-mais surtout tous les effets d'éclairage (ombres, réflexions, etc.). C'est ce que
-l'on appelle le rendu. L'opération, assez complexe, dépend du type de moteur
-de rendu.
+# Compilation (invite de commande, g++, sans CMake)
 
-Le moteur de rendu 3D analyse les éléments d'une image numérisée
-(couleurs, intensité et type de la lumière, ombres et leurs combinaisons, etc.),
-image censée être vue par une « caméra » virtuelle dont les coordonnées x y z déterminent l'angle de vue et la position des objets.
+Prérequis : MinGW-w64 (g++) installé sous Windows, avec les headers/libs Direct3D
+(fournis avec le SDK Windows / MinGW-w64 récent).
+
+Depuis l'invite de commande, dans le dossier du projet :
+
+```
+g++ -Iinclude src/main.cpp src/Camera.cpp src/Transform.cpp -o CameraApp.exe -ld3d11 -ldxgi -ld3dcompiler -ldxguid -luser32 -lgdi32 -std=c++17
+```
+
+Puis lancer l'exécutable :
+
+```
+CameraApp.exe
+```
+
+## Contenu
+
+- `Camera.h` / `Camera.cpp` : gestion de la caméra (position, rotation, matrices
+  View & Projection).
+- `main.cpp` : fenêtre Win32 + initialisation Direct3D (Device, Context,
+  SwapChain, Back Buffer, RTV, Depth-Stencil texture + DSV, liaison à
+  l'Output-Merger, Viewport) + boucle CLEAR / DISPLAY, avec les déplacements
+  caméra au clavier (Z/Q/S/D ou W/A/S/D selon disposition, + E/Q pour monter/descendre).
+
+## Prochaines étapes
+
+- Ajouter les shaders HLSL (Vertex Shader / Pixel Shader) et l'Input Layout.
+- Créer un mesh (Vertex Buffer + Index Buffer) et un buffer de matrices
+  (constant buffer) pour envoyer World/View/Projection au Vertex Shader.
+- Ajouter le DRAW dans `RenderFrame()`.
+
+## Pour compiler les fichiers de test
+```
+g++ -Iinclude test/Tests.cpp src/Camera.cpp src/Transform.cpp -o Tests.exe -std=c++17
+```
+
+Puis lancer l'executable
+
+```
+test.exe
+```
