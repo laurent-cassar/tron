@@ -14,11 +14,12 @@ int main() {
         else if (GLInputDown(MOU_BUTTON2)) std::cout << "CLIC BOUTON 2" << std::endl;
         else if (GLInputDown(MOU_ZOOM)) std::cout << "ZOOM" << std::endl;
         else {
-            GetCursorPos(mousePoint);
+            // GetCursorPos(mousePoint);
             cursor = MOUGetPosition();
             // std::cout << "POSITION CURSEUR : ";
             // std::cout<< "(" << mousePoint->x << "," << mousePoint->y << ") "; //<< std::endl;
-            // std::cout << "(" << cursor.x << "," << cursor.y << ")" << std::endl;
+            std::cout << "(" << cursor.x << "," << cursor.y << ")" << std::endl;
+            printf("(%d,%d\n", cursor.x, cursor.y);
         }
 
         Sleep(10);
