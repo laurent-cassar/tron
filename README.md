@@ -1,12 +1,27 @@
-# tron
-Un moteur de rendu 3D est un ensemble d’algorithmes formant ce qui est
-appelé le pipeline graphique qui utilise les cartes graphiques (matériel) et qui
-calculent une ou plusieurs images 3D en y restituant non seulement la
-projection 3D, les textures (apparence des surfaces des objets visualisés)
-mais surtout tous les effets d'éclairage (ombres, réflexions, etc.). C'est ce que
-l'on appelle le rendu. L'opération, assez complexe, dépend du type de moteur
-de rendu.
+# Compilation
 
-Le moteur de rendu 3D analyse les éléments d'une image numérisée
-(couleurs, intensité et type de la lumière, ombres et leurs combinaisons, etc.),
-image censée être vue par une « caméra » virtuelle dont les coordonnées x y z déterminent l'angle de vue et la position des objets.
+Prérequis : MinGW-w64 (g++) installé sous Windows, avec les headers/libs Direct3D
+(fournis avec le SDK Windows / MinGW-w64 récent).
+
+Depuis l'invite de commande, dans le dossier du projet :
+
+```
+g++ -Iinclude src/main.cpp src/Camera.cpp src/Transform.cpp src/Quaternion.cpp -o CameraApp.exe -ld3d11 -ldxgi -ld3dcompiler -ldxguid -luser32 -lgdi32 -std=c++17
+```
+
+Puis lancer l'exécutable :
+
+```
+CameraApp.exe
+```
+
+## Pour compiler les fichiers de test
+```
+g++ -Iinclude tests/Tests.cpp src/Camera.cpp src/Transform.cpp src/Quaternion.cpp -o Tests.exe -std=c++17
+```
+
+Puis lancer l'executable
+
+```
+Tests.exe
+```
