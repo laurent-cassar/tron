@@ -10,6 +10,7 @@
 
 #include "TestFramework.h"
 #include "Camera.h"
+#include "Quaternion.h"
 
 using namespace DirectX; // pour XM_PIDIV2, XM_2PI, ...
 
@@ -39,8 +40,7 @@ void TestVector4()
     SECTION("Vector4 (quaternions)");
 
     Vector4 identity = Vector4::Identity();
-    CHECK(ApproxEqual(identity.w, 1.0f) && ApproxEqual(identity.x, 0.0f)
-          && ApproxEqual(identity.y, 0.0f) && ApproxEqual(identity.z, 0.0f),
+    CHECK(ApproxEqual(identity.w, 1.0f) && ApproxEqual(identity.x, 0.0f) && ApproxEqual(identity.y, 0.0f) && ApproxEqual(identity.z, 0.0f),
           "Quaternion identité == (0,0,0,1)");
 
     Vector4 noRotation = Vector4::FromEuler(0.0f, 0.0f, 0.0f);
@@ -55,8 +55,7 @@ void TestMatrix4x4()
     SECTION("Matrix4x4");
 
     Matrix4x4 identity = Matrix4x4::Identity();
-    CHECK(ApproxEqual(identity.m.m[0][0], 1.0f) && ApproxEqual(identity.m.m[1][1], 1.0f)
-          && ApproxEqual(identity.m.m[2][2], 1.0f) && ApproxEqual(identity.m.m[3][3], 1.0f),
+    CHECK(ApproxEqual(identity.m.m[0][0], 1.0f) && ApproxEqual(identity.m.m[1][1], 1.0f) && ApproxEqual(identity.m.m[2][2], 1.0f) && ApproxEqual(identity.m.m[3][3], 1.0f),
           "La diagonale de l'identité vaut 1");
     CHECK(ApproxEqual(identity.m.m[0][1], 0.0f) && ApproxEqual(identity.m.m[1][0], 0.0f),
           "Les éléments hors diagonale de l'identité valent 0");
@@ -122,7 +121,7 @@ void TestCamera()
     CHECK_FLOAT_EQ((posAfter - posBefore).Length(), 2.0f, "MoveForward(2) déplace la caméra de 2 unités");
 
     cam.SetProjection(XM_PIDIV4, 16.0f / 9.0f, 0.1f, 100.0f);
-    const Matrix4x4& proj = cam.GetProjectionMatrix();
+    const Matrix4x4 &proj = cam.GetProjectionMatrix();
     // Signature d'une matrice de projection perspective LH valide (DirectXMath) :
     // m[2][3] == 1 et m[3][3] == 0 (contrairement à l'identité)
     CHECK_FLOAT_EQ(proj.m.m[2][3], 1.0f, "La Projection Matrix a la forme d'une perspective valide (m[2][3] == 1)");
@@ -132,20 +131,85 @@ void TestCamera()
     cam.Rotate(0.5f, 0.0f);
     cam.Update();
     Matrix4x4 viewAfter = cam.GetViewMatrix();
-    bool viewChanged = !ApproxEqual(viewBefore.m.m[0][0], viewAfter.m.m[0][0])
-                     || !ApproxEqual(viewBefore.m.m[2][0], viewAfter.m.m[2][0]);
+    bool viewChanged = !ApproxEqual(viewBefore.m.m[0][0], viewAfter.m.m[0][0]) || !ApproxEqual(viewBefore.m.m[2][0], viewAfter.m.m[2][0]);
     CHECK(viewChanged, "Rotate() + Update() modifient bien la View Matrix");
+}
+
+void TestQuaternion()
+{
+    SECTION("Quaternion");
+
+    Quaternion id = Quaternion::Identity();
+    CHECK(ApproxEqual(id.w, 1.0f) && ApproxEqual(id.x, 0.0f) && ApproxEqual(id.y, 0.0f) && ApproxEqual(id.z, 0.0f),
+          "Quaternion::Identity() == (w=1, x=0, y=0, z=0)");
+
+    // Normalisation : un quaternion "gonflé" doit revenir à une norme de 1
+    Quaternion notUnit(2.0f, 0.0f, 0.0f, 0.0f);
+    CHECK_FLOAT_EQ(notUnit.Normalized().Length(), 1.0f, "Normalized() donne toujours un quaternion de longueur 1");
+
+    // Produit hamiltonien : q * Identity == q (l'identité est neutre)
+    Quaternion q = Quaternion::FromAxisAngle(Vector3::Up(), XM_PIDIV2);
+    Quaternion qTimesId = q * Quaternion::Identity();
+    CHECK(ApproxEqual(qTimesId.w, q.w) && ApproxEqual(qTimesId.x, q.x) && ApproxEqual(qTimesId.y, q.y) && ApproxEqual(qTimesId.z, q.z),
+          "q * Identity == q (élément neutre du produit hamiltonien)");
+
+    // Non-commutativité : deux rotations à 90° sur des axes différents ne
+    // donnent PAS le même résultat selon l'ordre.
+    Quaternion rotY = Quaternion::FromAxisAngle(Vector3::Up(), XM_PIDIV2);
+    Quaternion rotX = Quaternion::FromAxisAngle(Vector3::Right(), XM_PIDIV2);
+    Quaternion ab = rotY * rotX;
+    Quaternion ba = rotX * rotY;
+    bool sameResult = ApproxEqual(ab.w, ba.w) && ApproxEqual(ab.x, ba.x) && ApproxEqual(ab.y, ba.y) && ApproxEqual(ab.z, ba.z);
+    CHECK(!sameResult, "Le produit hamiltonien n'est PAS commutatif (a*b != b*a)");
+
+    // Conjugué d'un quaternion unitaire == son inverse
+    Quaternion conj = q.Conjugate();
+    Quaternion inv = q.Inverse();
+    CHECK(ApproxEqual(conj.w, inv.w) && ApproxEqual(conj.x, inv.x) && ApproxEqual(conj.y, inv.y) && ApproxEqual(conj.z, inv.z),
+          "Pour un quaternion unitaire, Conjugate() == Inverse()");
+
+    // q * q.Inverse() == Identity
+    Quaternion shouldBeIdentity = q * q.Inverse();
+    CHECK(ApproxEqual(shouldBeIdentity.w, 1.0f), "q * q.Inverse() == Identity (w == 1)");
+
+    // Rotation d'un vecteur : 90° autour de Up doit envoyer Forward vers Right
+    // (ou -Right selon le sens de rotation -- on vérifie juste la cohérence interne)
+    Vector3 rotated = rotY.RotateVector(Vector3::Forward());
+    CHECK_FLOAT_EQ(rotated.Length(), 1.0f, "RotateVector() préserve la longueur d'un vecteur unitaire");
+    CHECK_FLOAT_EQ(Vector3::Dot(rotated, Vector3::Up()), 0.0f,
+                   "Une rotation autour de Up ne fait pas sortir le vecteur du plan horizontal");
+
+    // Cohérence interne : RotateVector() et ToMatrix4x4() doivent produire
+    // exactement le même résultat, puisqu'ils représentent la même rotation.
+    Matrix4x4 rotMatrix = rotY.ToMatrix4x4();
+    Vector3 rotatedByMatrix = rotMatrix.TransformVector(Vector3::Forward());
+    CHECK_VEC3_EQ(rotated, rotatedByMatrix,
+                  "RotateVector() et ToMatrix4x4()+TransformVector() donnent le même résultat");
+
+    // Aller-retour Quaternion -> Matrice -> Quaternion (méthode de Shepperd)
+    Quaternion roundTrip = Quaternion::FromMatrix4x4(q.ToMatrix4x4());
+    // q et -q représentent la même rotation, donc on accepte les deux signes.
+    bool sameQuat = (ApproxEqual(roundTrip.w, q.w) && ApproxEqual(roundTrip.x, q.x) && ApproxEqual(roundTrip.y, q.y) && ApproxEqual(roundTrip.z, q.z)) || (ApproxEqual(roundTrip.w, -q.w) && ApproxEqual(roundTrip.x, -q.x) && ApproxEqual(roundTrip.y, -q.y) && ApproxEqual(roundTrip.z, -q.z));
+    CHECK(sameQuat, "FromMatrix4x4(ToMatrix4x4(q)) == q (aller-retour, à un signe près)");
+
+    // Pas de blocage de Gimbal : une rotation composée à 90° de pitch (cas
+    // qui bloquerait des angles d'Euler classiques) reste bien définie et
+    // unitaire.
+    Quaternion gimbalCase = Quaternion::FromEulerAngles(XM_PIDIV2, XM_PIDIV4, XM_PIDIV4);
+    CHECK_FLOAT_EQ(gimbalCase.Normalized().Length(), 1.0f,
+                   "Une composition pitch=90° + yaw + roll reste un quaternion valide (pas de division par 0)");
 }
 
 int main()
 {
-    printf("=== Tests Vector3 / Vector4 / Matrix4x4 / Transform / Camera ===\n");
+    printf("=== Tests Vector3 / Vector4 / Matrix4x4 / Transform / Camera / Quaternion ===\n");
 
     TestVector3();
     TestVector4();
     TestMatrix4x4();
     TestTransform();
     TestCamera();
+    TestQuaternion();
 
     printf("\n=== Résumé : %d réussi(s), %d échoué(s) ===\n", g_testsPassed, g_testsFailed);
 
