@@ -24,4 +24,9 @@ struct AABB {
     float maxZ;
 };
 
+struct Ray {
+    Position3 origin;   // Point de départ du rayon
+    Position3 direction; // Direction du rayon (normalisée)
+};
+
 #endif FORMES_H

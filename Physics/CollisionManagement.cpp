@@ -114,3 +114,95 @@ float GetClipZ(AABB aabb1, AABB aabb2, float deltaZ) {
     }
     return deltaZ;
 }
+
+bool RaycastAABB(Ray ray, AABB aabb, float* t) {
+    float tmin = 0.0f;
+    float tmax = std::numeric_limits<float>::max();
+
+    // X
+    float invDirX = 1.0f / ray.direction.x;
+    float t1 = (aabb.minX - ray.origin.x) * invDirX;
+    float t2 = (aabb.maxX - ray.origin.x) * invDirX;
+    float tnearX = std::min(t1, t2);
+    float tfarX = std::max(t1, t2);
+
+    tmin = std::max(tmin, tnearX);
+    tmax = std::min(tmax, tfarX);
+
+    if (tmin > tfarX || tmax < tnearX) {
+        return false;
+    }
+
+    // Y
+    float invDirY = 1.0f / ray.direction.y;
+    t1 = (aabb.minY - ray.origin.y) * invDirY;
+    t2 = (aabb.maxY - ray.origin.y) * invDirY;
+    float tnearY = std::min(t1, t2);
+    float tfarY = std::max(t1, t2);
+
+    tmin = std::max(tmin, tnearY);
+    tmax = std::min(tmax, tfarY);
+
+    if (tmin > tfarY || tmax < tnearY) {
+        return false;
+    }
+
+    // Z
+    float invDirZ = 1.0f / ray.direction.z;
+    t1 = (aabb.minZ - ray.origin.z) * invDirZ;
+    t2 = (aabb.maxZ - ray.origin.z) * invDirZ;
+    float tnearZ = std::min(t1, t2);
+    float tfarZ = std::max(t1, t2);
+
+    tmin = std::max(tmin, tnearZ);
+    tmax = std::min(tmax, tfarZ);
+
+    if (tmin > tfarZ || tmax < tnearZ) {
+        return false;
+    }
+
+    *t = tmin;
+    return true;
+}
+
+bool RaycastSphere(Ray ray, Sphere sphere, float* t) {
+    Position3 oc = {ray.origin.x - sphere.position.x,
+                     ray.origin.y - sphere.position.y,
+                     ray.origin.z - sphere.position.z};
+
+    float a = ray.direction.x * ray.direction.x +
+              ray.direction.y * ray.direction.y +
+              ray.direction.z * ray.direction.z;
+
+    float b = 2.0f * (oc.x * ray.direction.x +
+                       oc.y * ray.direction.y +
+                       oc.z * ray.direction.z);
+
+    float c = oc.x * oc.x + oc.y * oc.y + oc.z * oc.z - sphere.rayon * sphere.rayon;
+
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+        return false; // Pas d'intersection
+    } else {
+        discriminant = std::sqrt(discriminant);
+        float t0 = (-b - discriminant) / (2.0f * a);
+        float t1 = (-b + discriminant) / (2.0f * a);
+
+        if (t0 >= 0) {
+            *t = t0;
+            return true;
+        } else if (t1 >= 0) {
+            *t = t1;
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+Position3 Normalize(Position3 vec) {
+    float length = std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+    if (length == 0.0f) return {0.0f, 0.0f, 0.0f};
+    return {vec.x / length, vec.y / length, vec.z / length};
+}

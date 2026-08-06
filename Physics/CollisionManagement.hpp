@@ -19,5 +19,7 @@ float GetClipX(AABB aabb1, AABB aabb2, float deltaX);
 float GetClipY(AABB aabb1, AABB aabb2, float deltaY);
 float GetClipZ(AABB aabb1, AABB aabb2, float deltaZ);
 
+bool RaycastSphere(Ray ray, Sphere sphere, float* t);
+bool RaycastAABB(Ray ray, AABB aabb, float* t);
 
 #endif
