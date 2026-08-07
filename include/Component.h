@@ -1,21 +1,17 @@
 #pragma once
 
+class Entity;
 
-class GameObject; 
-
-class Component {
-protected:
-    GameObject* gameObject; // Réf
-
+class Component
+{
 public:
     virtual ~Component() = default;
+    virtual void update(float deltaTime) {}
+    virtual void render() {}
+    
+    Entity* getEntity() const { return m_entity; }
 
-  
-    void SetGameObject(GameObject* go) { gameObject = go; }
-    GameObject* GetGameObject() const { return gameObject; }
-
-    virtual void Awake() {}
-    virtual void Start() {}
-    virtual void Update(float deltaTime) {}
-    virtual void Render() {} 
+protected:
+    Entity* m_entity = nullptr;
+    friend class Entity;
 };

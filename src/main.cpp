@@ -1,6 +1,10 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#include "Camera.h"
+#include "Input.h"
+#include "Time.h"
+#include "Entity.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -10,21 +14,51 @@
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "kernel32.lib")
 
-static ID3D11Device*           g_device = nullptr;
-static ID3D11DeviceContext*    g_context = nullptr;
-static IDXGISwapChain*         g_swapChain = nullptr;
+static ID3D11Device* g_device = nullptr;
+static ID3D11DeviceContext* g_context = nullptr;
+static IDXGISwapChain* g_swapChain = nullptr;
 static ID3D11RenderTargetView* g_renderTargetView = nullptr;
 static ID3D11DepthStencilView* g_depthStencilView = nullptr;
-static ID3D11VertexShader*     g_vertexShader = nullptr;
-static ID3D11PixelShader*      g_pixelShader = nullptr;
-static ID3D11InputLayout*      g_inputLayout = nullptr;
-static ID3D11Buffer*           g_vertexBuffer = nullptr;
-static ID3D11Buffer*           g_constantBuffer = nullptr;
-static ID3D11RasterizerState*  g_rasterizerState = nullptr;
+static ID3D11VertexShader* g_vertexShader = nullptr;
+static ID3D11PixelShader* g_pixelShader = nullptr;
+static ID3D11InputLayout* g_inputLayout = nullptr;
+static ID3D11Buffer* g_vertexBuffer = nullptr;
+static ID3D11Buffer* g_constantBuffer = nullptr;
+static ID3D11RasterizerState* g_rasterizerState = nullptr;
+
+static Camera g_camera;
+
 static const UINT WINDOW_WIDTH = 1280;
 static const UINT WINDOW_HEIGHT = 720;
 
 #define SAFE_RELEASE(p) if((p)){ (p)->Release(); (p)=nullptr; }
+
+bool ResizeSwapChain(UINT width, UINT height);
+bool InitDirect3D(HWND hwnd);
+void CleanupDirect3D();
+void RenderFrame();
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) { PostQuitMessage(0); return 0; }
+        break;
+    case WM_SIZE:
+        if (g_swapChain && wParam != SIZE_MINIMIZED)
+        {
+            UINT width = LOWORD(lParam);
+            UINT height = HIWORD(lParam);
+            ResizeSwapChain(width, height);
+        }
+        break;
+    }
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
 
 bool ResizeSwapChain(UINT width, UINT height)
 {
@@ -74,28 +108,6 @@ bool ResizeSwapChain(UINT width, UINT height)
     return true;
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch (msg)
-    {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-    case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE) { PostQuitMessage(0); return 0; }
-        break;
-    case WM_SIZE:
-        if (g_swapChain && wParam != SIZE_MINIMIZED)
-        {
-            UINT width = LOWORD(lParam);
-            UINT height = HIWORD(lParam);
-            ResizeSwapChain(width, height);
-        }
-        break;
-    }
-    return DefWindowProc(hwnd, msg, wParam, lParam);
-}
-
 bool InitDirect3D(HWND hwnd)
 {
     DXGI_SWAP_CHAIN_DESC scd = {};
@@ -123,19 +135,16 @@ bool InitDirect3D(HWND hwnd)
     ID3DBlob* vsBlob = nullptr;
     ID3DBlob* psBlob = nullptr;
 
-    // Compile vertex shader
     hr = D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBlob, nullptr);
     if (FAILED(hr)) return false;
     hr = g_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &g_vertexShader);
     if (FAILED(hr)) { SAFE_RELEASE(vsBlob); return false; }
 
-    // Compile pixel shader
     hr = D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", 0, 0, &psBlob, nullptr);
     if (FAILED(hr)) { SAFE_RELEASE(vsBlob); return false; }
     hr = g_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &g_pixelShader);
     if (FAILED(hr)) { SAFE_RELEASE(vsBlob); SAFE_RELEASE(psBlob); return false; }
 
-    // Create input layout
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
@@ -145,12 +154,10 @@ bool InitDirect3D(HWND hwnd)
     SAFE_RELEASE(psBlob);
     if (FAILED(hr)) return false;
 
-    // Create constant buffer (identity matrix)
     D3D11_BUFFER_DESC cbDesc = {};
     cbDesc.Usage = D3D11_USAGE_DEFAULT;
     cbDesc.ByteWidth = sizeof(float) * 16;
     cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbDesc.CPUAccessFlags = 0;
 
     float identityMatrix[16] = {
         1.0f, 0.0f, 0.0f, 0.0f,
@@ -164,26 +171,23 @@ bool InitDirect3D(HWND hwnd)
     hr = g_device->CreateBuffer(&cbDesc, &cbInitData, &g_constantBuffer);
     if (FAILED(hr)) return false;
 
-    // Create triangle vertex buffer (NDC coordinates: -1.0 to 1.0)
     struct Vertex { float pos[3]; float col[3]; };
     Vertex vertices[] = {
-        { {  0.0f,  0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f } },  // Red top
-        { {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f } },  // Green bottom-right
-        { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f } }   // Blue bottom-left
+        { {  0.0f,  0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f } }
     };
 
     D3D11_BUFFER_DESC bd = {};
     bd.Usage = D3D11_USAGE_DEFAULT;
     bd.ByteWidth = sizeof(vertices);
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    bd.CPUAccessFlags = 0;
 
     D3D11_SUBRESOURCE_DATA init = {};
     init.pSysMem = vertices;
     hr = g_device->CreateBuffer(&bd, &init, &g_vertexBuffer);
     if (FAILED(hr)) return false;
 
-    // Create rasterizer state (fill mode)
     D3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.FillMode = D3D11_FILL_SOLID;
     rastDesc.CullMode = D3D11_CULL_BACK;
@@ -198,6 +202,9 @@ bool InitDirect3D(HWND hwnd)
 
     hr = g_device->CreateRasterizerState(&rastDesc, &g_rasterizerState);
     if (FAILED(hr)) return false;
+
+    g_camera.setPerspective(3.14159f / 4.0f, (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 1000.0f);
+    g_camera.getTransform().setPosition(Vector3(0.0f, 0.0f, -2.0f));
 
     return true;
 }
@@ -221,14 +228,26 @@ void RenderFrame()
 {
     if (!g_context || !g_renderTargetView || !g_depthStencilView) return;
 
+    Input::update();
+    Time::update();
+
+    if (Input::isKeyDown('W')) g_camera.moveForward(5.0f * Time::deltaTime());
+    if (Input::isKeyDown('S')) g_camera.moveForward(-5.0f * Time::deltaTime());
+    if (Input::isKeyDown('A')) g_camera.moveRight(-5.0f * Time::deltaTime());
+    if (Input::isKeyDown('D')) g_camera.moveRight(5.0f * Time::deltaTime());
+    if (Input::isKeyDown('Q')) g_camera.moveUp(-5.0f * Time::deltaTime());
+    if (Input::isKeyDown('E')) g_camera.moveUp(5.0f * Time::deltaTime());
+
+    g_camera.rotate(Input::getMouseDeltaX() * 0.1f, Input::getMouseDeltaY() * 0.1f);
+    g_camera.update();
+
     const float clearColor[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
     g_context->ClearRenderTargetView(g_renderTargetView, clearColor);
     g_context->ClearDepthStencilView(g_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    // Bind all pipeline state
     g_context->IASetInputLayout(g_inputLayout);
     
-    UINT stride = sizeof(float) * 6;  // 3 floats pos + 3 floats color
+    UINT stride = sizeof(float) * 6;
     UINT offset = 0;
     g_context->IASetVertexBuffers(0, 1, &g_vertexBuffer, &stride, &offset);
     g_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -240,7 +259,6 @@ void RenderFrame()
     
     g_context->PSSetShader(g_pixelShader, nullptr, 0);
 
-    // Draw the triangle (3 vertices)
     g_context->Draw(3, 0);
 
     g_swapChain->Present(1, 0);
@@ -262,6 +280,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return -1;
     ShowWindow(hwnd, SW_SHOW);
+
+    Input::initialize();
+    Time::initialize();
 
     if (!InitDirect3D(hwnd)) { CleanupDirect3D(); return -1; }
 

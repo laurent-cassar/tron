@@ -1,60 +1,41 @@
 #include "Transform.h"
 
-using namespace DirectX;
+Transform::Transform() : m_position(0, 0, 0), m_rotation(0, 0, 0), m_scale(1, 1, 1) {}
 
-Transform::Transform()
-    : m_position(Vector3::Zero()), m_rotation(Vector4::Identity()), m_scale(Vector3::One())
+Vector3 Transform::forward() const
 {
+    float yaw = m_rotation.y * 3.14159f / 180.0f;
+    float pitch = m_rotation.x * 3.14159f / 180.0f;
+    return Vector3(
+        sinf(yaw) * cosf(pitch),
+        -sinf(pitch),
+        cosf(yaw) * cosf(pitch)
+    ).normalized();
 }
 
-void Transform::SetPosition(const Vector3 &position)
+Vector3 Transform::right() const
 {
-    m_position = position;
+    return forward().cross(Vector3(0, 1, 0)).normalized();
 }
 
-void Transform::SetRotation(const Vector4 &rotationQuaternion)
+Vector3 Transform::up() const
 {
-    m_rotation = rotationQuaternion;
+    return right().cross(forward()).normalized();
 }
 
-void Transform::SetScale(const Vector3 &scale)
+Matrix4 Transform::getMatrix() const
 {
-    m_scale = scale;
-}
+    float yaw = m_rotation.y * 3.14159f / 180.0f;
+    float pitch = m_rotation.x * 3.14159f / 180.0f;
+    float roll = m_rotation.z * 3.14159f / 180.0f;
 
-void Transform::Translate(const Vector3 &delta)
-{
-    m_position += delta;
-}
+    Matrix4 rotX = Matrix4::RotationX(pitch);
+    Matrix4 rotY = Matrix4::RotationY(yaw);
+    Matrix4 rotZ = Matrix4::RotationZ(roll);
 
-Vector3 Transform::GetForward() const
-{
-    XMVECTOR rotation = m_rotation.ToXM();
-    XMVECTOR forward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-    return Vector3::FromXM(XMVector3Rotate(forward, rotation));
-}
+    Matrix4 rot = rotY * rotX * rotZ;
+    Matrix4 scale = Matrix4::Scaling(m_scale);
+    Matrix4 trans = Matrix4::Translation(m_position);
 
-Vector3 Transform::GetRight() const
-{
-    XMVECTOR rotation = m_rotation.ToXM();
-    XMVECTOR right = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-    return Vector3::FromXM(XMVector3Rotate(right, rotation));
-}
-
-Vector3 Transform::GetUp() const
-{
-    XMVECTOR rotation = m_rotation.ToXM();
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    return Vector3::FromXM(XMVector3Rotate(up, rotation));
-}
-
-Matrix4x4 Transform::GetWorldMatrix() const
-{
-    XMVECTOR scaleXM = XMVectorSet(m_scale.x, m_scale.y, m_scale.z, 0.0f);
-    XMVECTOR rotationXM = m_rotation.ToXM();
-    XMVECTOR positionXM = XMVectorSet(m_position.x, m_position.y, m_position.z, 0.0f);
-
-    XMMATRIX world = XMMatrixScalingFromVector(scaleXM) * XMMatrixRotationQuaternion(rotationXM) * XMMatrixTranslationFromVector(positionXM);
-
-    return Matrix4x4::FromXM(world);
+    return trans * rot * scale;
 }

@@ -1,61 +1,30 @@
 #pragma once
 
-#include <directxmath/DirectXMath.h>
+#include <cmath>
 
 struct Vector3
 {
     float x, y, z;
 
-    Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
-    Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+    Vector3() : x(0), y(0), z(0) {}
+    Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-    static Vector3 Zero() { return Vector3(0.0f, 0.0f, 0.0f); }
-    static Vector3 One() { return Vector3(1.0f, 1.0f, 1.0f); }
-    static Vector3 Up() { return Vector3(0.0f, 1.0f, 0.0f); }
-    static Vector3 Forward() { return Vector3(0.0f, 0.0f, 1.0f); }
-    static Vector3 Right() { return Vector3(1.0f, 0.0f, 0.0f); }
-
-    Vector3 operator+(const Vector3 &other) const { return Vector3(x + other.x, y + other.y, z + other.z); }
-    Vector3 operator-(const Vector3 &other) const { return Vector3(x - other.x, y - other.y, z - other.z); }
-    Vector3 operator*(float scalar) const { return Vector3(x * scalar, y * scalar, z * scalar); }
-
-    Vector3 &operator+=(const Vector3 &other)
-    {
-        x += other.x;
-        y += other.y;
-        z += other.z;
-        return *this;
+    Vector3 operator+(const Vector3& v) const { return Vector3(x + v.x, y + v.y, z + v.z); }
+    Vector3 operator-(const Vector3& v) const { return Vector3(x - v.x, y - v.y, z - v.z); }
+    Vector3 operator*(float s) const { return Vector3(x * s, y * s, z * s); }
+    
+    float dot(const Vector3& v) const { return x * v.x + y * v.y + z * v.z; }
+    
+    Vector3 cross(const Vector3& v) const 
+    { 
+        return Vector3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x); 
     }
-
-    float Length() const
-    {
-        DirectX::XMVECTOR v = ToXM();
-        return DirectX::XMVectorGetX(DirectX::XMVector3Length(v));
-    }
-
-    Vector3 Normalized() const
-    {
-        DirectX::XMVECTOR v = ToXM();
-        DirectX::XMVECTOR n = DirectX::XMVector3Normalize(v);
-        return FromXM(n);
-    }
-
-    static float Dot(const Vector3 &a, const Vector3 &b)
-    {
-        DirectX::XMVECTOR result = DirectX::XMVector3Dot(a.ToXM(), b.ToXM());
-        return DirectX::XMVectorGetX(result);
-    }
-
-    static Vector3 Cross(const Vector3 &a, const Vector3 &b)
-    {
-        return FromXM(DirectX::XMVector3Cross(a.ToXM(), b.ToXM()));
-    }
-
-    DirectX::XMVECTOR ToXM() const { return DirectX::XMVectorSet(x, y, z, 0.0f); }
-    static Vector3 FromXM(DirectX::FXMVECTOR v)
-    {
-        DirectX::XMFLOAT3 f;
-        DirectX::XMStoreFloat3(&f, v);
-        return Vector3(f.x, f.y, f.z);
+    
+    float length() const { return sqrtf(x * x + y * y + z * z); }
+    
+    Vector3 normalized() const 
+    { 
+        float len = length(); 
+        return len > 0 ? Vector3(x / len, y / len, z / len) : Vector3(0, 0, 0); 
     }
 };
