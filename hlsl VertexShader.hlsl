@@ -21,4 +21,4 @@ VS_OUTPUT main(VS_INPUT input)
     output.pos = mul(float4(input.pos, 1.0f), WVP);
     output.color = input.color;
     return output;
-}
+}   

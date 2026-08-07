@@ -1,6 +1,7 @@
+// Tourne une fois par sommet : transforme la position 3D en position ecran.
 cbuffer TransformBuffer : register(b0)
 {
-    float4x4 WVP;
+    matrix WVP; // World * View * Projection (temporaire, voir Renderer.cpp)
 };
 
 struct VS_INPUT

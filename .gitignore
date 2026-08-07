@@ -1,3 +1,21 @@
-*.pdf
-*.pptx
-*.html
+# Visual Studio / Fichiers temporaires
+.vs/
+*.user
+*.suo
+*.userosv
+*.sln.docstates
+
+# Dossiers de build CMake / Compilateur
+build/
+bin/
+obj/
+x64/
+Debug/
+Release/
+
+# Executables & fichiers generes
+*.exe
+*.cso
+*.pdb
+*.obj
+*.ilk
